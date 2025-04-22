@@ -1,0 +1,177 @@
+﻿@page "/yolluk"
+
+@using Yolluk_frontend_blazor.Services
+@inject MudurlukToYollukService MudurlukService
+
+<h3 class="mb-4">Yolluk Sayfası</h3>
+
+<!-- Üst taraf: Form + Seçilen Personel -->
+<div class="grid grid-cols-2 gap-4">
+
+    <!-- 1. Kısım: Sol Üst Form -->
+    <div class="p-4 border rounded shadow">
+        <h4 class="mb-3">Yolluk Bilgileri</h4>
+
+        <InputText @bind-Value="yolluk.DilekceNo" class="form-control mb-2" placeholder="Dilekçe No" />
+        <InputDate @bind-Value="yolluk.DilekceTarihi" class="form-control mb-2" />
+        <InputText @bind-Value="yolluk.MakbuzNo" class="form-control mb-2" placeholder="Makbuz No" />
+        <InputDate @bind-Value="yolluk.MakbuzTarihi" class="form-control mb-2" />
+
+        <select @bind="yolluk.Guzergah" class="form-select mb-2">
+            <option disabled selected>Güzergah Seçiniz</option>
+            @foreach (var g in guzergahlar)
+            {
+                <option value="@g">@g</option>
+            }
+        </select>
+
+        <select @bind="yolluk.Firma" class="form-select mb-2">
+            <option disabled selected>Firma Seçiniz</option>
+            @foreach (var f in firmalar)
+            {
+                <option value="@f">@f</option>
+            }
+        </select>
+
+        <select @bind="yolluk.Musavir" class="form-select mb-2">
+            <option disabled selected>Müşavir Seçiniz</option>
+            @foreach (var m in musavirler)
+            {
+                <option value="@m">@m</option>
+            }
+        </select>
+
+        <select @bind="yolluk.YollukTuru" class="form-select mb-2">
+            <option disabled selected>Yolluk Türü</option>
+            @foreach (var t in yollukTurleri)
+            {
+                <option value="@t">@t</option>
+            }
+        </select>
+
+        <select @bind="yolluk.Hesap" class="form-select mb-2">
+            <option disabled selected>Hesap Seçiniz</option>
+            @foreach (var h in hesaplar)
+            {
+                <option value="@h">@h</option>
+            }
+        </select>
+
+        <InputNumber @bind-Value="yolluk.KisiBasiTutar" class="form-control mb-2" placeholder="Kişi Başı Tutar" />
+        <InputDate @bind-Value="yolluk.TutarTarihi" class="form-control mb-2" />
+
+    </div>
+
+    <!-- 3. Kısım: Sağ Üst Seçilen Personeller -->
+    <div class="p-4 border rounded shadow">
+        <h4 class="mb-3">Seçilen Personeller</h4>
+        <ul class="list-group">
+            @foreach (var p in secilenPersoneller)
+            {
+                <li class="list-group-item d-flex justify-content-between">
+                    @p.AdSoyad
+                    <button class="btn btn-sm btn-danger" @onclick="@(() => Cikar(p))">Çıkar</button>
+                </li>
+            }
+        </ul>
+
+        <button class="btn btn-warning mt-2" @onclick="Temizle">Listeyi Temizle</button>
+    </div>
+</div>
+
+<!-- 2. Kısım: Alt Taraf Uygun Personeller -->
+<div class="mt-6 border rounded shadow p-4">
+    <h4>Uygun Personel Listesi</h4>
+    <table class="table table-bordered table-striped table-sm">
+        <thead>
+            <tr>
+                <th>Seç</th>
+                <th>Yolluk Türü</th>
+                <th>Toplam Tutar</th>
+                <th>Sicil No</th>
+                <th>Ad</th>
+                <th>Soyad</th>
+                <th>Unvan</th>
+                <th>Müdürlük</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in uygunPersoneller)
+            {
+                <tr>
+                    <td><input type="checkbox" @onchange="@(() => Ekle(p))" /></td>
+                    <td>
+                        <select @bind="p.YollukTuru">
+                            @foreach (var t in yollukTurleri)
+                            {
+                                <option value="@t">@t</option>
+                            }
+                        </select>
+                    </td>
+                    <td>@p.ToplamTutar</td>
+                    <td>@p.SicilNo</td>
+                    <td>@p.Ad</td>
+                    <td>@p.Soyad</td>
+                    <td>@p.Unvan</td>
+                    <td>@p.Mudurluk</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private YollukModel yolluk = new();
+    private List<string> guzergahlar = new() { "Ankara-İstanbul", "İzmir-Antalya" };
+    private List<string> firmalar = new() { "Firma A", "Firma B" };
+    private List<string> musavirler = new() { "Müşavir 1", "Müşavir 2" };
+    private List<string> yollukTurleri = new() { "Geçici", "Sürekli" };
+    private List<string> hesaplar = new() { "Hesap 1", "Hesap 2" };
+
+    private List<UygunPersonel> uygunPersoneller = new(); // API'den çekilecek
+    private List<UygunPersonel> secilenPersoneller = new();
+
+    private void Ekle(UygunPersonel p)
+    {
+        if (!secilenPersoneller.Any(x => x.SicilNo == p.SicilNo))
+            secilenPersoneller.Add(p);
+    }
+
+    private void Cikar(UygunPersonel p)
+    {
+        secilenPersoneller.Remove(p);
+    }
+
+    private void Temizle()
+    {
+        secilenPersoneller.Clear();
+    }
+
+    public class YollukModel
+    {
+        public string DilekceNo { get; set; }
+        public DateTime DilekceTarihi { get; set; }
+        public string MakbuzNo { get; set; }
+        public DateTime? MakbuzTarihi { get; set; }
+        public string Guzergah { get; set; }
+        public string Firma { get; set; }
+        public string Musavir { get; set; }
+        public string YollukTuru { get; set; }
+        public string Hesap { get; set; }
+        public decimal KisiBasiTutar { get; set; }
+        public DateTime TutarTarihi { get; set; }
+    }
+
+    public class UygunPersonel
+    {
+        public string SicilNo { get; set; }
+        public string Ad { get; set; }
+        public string Soyad { get; set; }
+        public string Unvan { get; set; }
+        public string Mudurluk { get; set; }
+        public string YollukTuru { get; set; }
+        public decimal ToplamTutar { get; set; }
+
+        public string AdSoyad => $"{Ad} {Soyad}";
+    }
+}

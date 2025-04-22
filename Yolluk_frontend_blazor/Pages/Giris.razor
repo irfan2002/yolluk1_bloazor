@@ -1,0 +1,73 @@
+﻿@page "/"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<h3>Yolluk Giriş</h3>
+
+<div class="card p-4" style="width:400px">
+    <div class="mb-3">
+        <label for="kullaniciKodu">Kullanıcı Kodu:</label>
+        <input id="kullaniciKodu" class="form-control" @bind="kullaniciKodu" />
+    </div>
+    <div class="mb-3">
+        <label for="parola">Parola:</label>
+        <input id="parola" type="password" class="form-control" @bind="parola" />
+    </div>
+    <button class="btn btn-primary me-2" type="button" @onclick="GirisYap">Tamam</button>
+    <button class="btn btn-secondary" type="button" @onclick="Iptal">İptal</button>
+
+    @if (!string.IsNullOrEmpty(hataMesaji))
+    {
+        <div class="alert alert-danger mt-3">@hataMesaji</div>
+    }
+</div>
+
+@code {
+    private string kullaniciKodu;
+    private string parola;
+    private string hataMesaji;
+
+    private async Task GirisYap()
+    {
+        hataMesaji = "";
+
+        try
+        {
+            var response = await Http.GetAsync($"https://localhost:7273/api/Kullanici/GetParola_ByKullaniciKodu?kullaniciKodu={kullaniciKodu}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var dogruParola = await response.Content.ReadAsStringAsync();
+
+                if (dogruParola.Trim('"') == parola) // Trim('"') ile JSON formatında gelen çift tırnakları temizliyoruz
+                {
+                    //Navigation.NavigateTo("/mudurluk");
+                    Navigation.NavigateTo($"/mudurluk?kullaniciKodu={kullaniciKodu}");
+                }
+                else
+                {
+                    hataMesaji = "Parola hatalı.";
+                }
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                hataMesaji = "Kullanıcı bulunamadı.";
+            }
+            else
+            {
+                hataMesaji = "Sunucu hatası oluştu.";
+            }
+        }
+        catch (Exception ex)
+        {
+            hataMesaji = $"Bir hata oluştu: {ex.Message}";
+        }
+    }
+
+    private void Iptal()
+    {
+        kullaniciKodu = "";
+        parola = "";
+        hataMesaji = "";
+    }
+}

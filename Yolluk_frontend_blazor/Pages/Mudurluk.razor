@@ -1,0 +1,157 @@
+﻿@page "/mudurluk"
+@using Yolluk_frontend_blazor.Services
+@inject HttpClient Http
+@inject NavigationManager NavManager
+@inject NavigationManager navigationManager
+@inject MudurlukToYollukService stateService
+@inject IJSRuntime jsRuntime
+
+<h3>Müdürlük Seçimi</h3>
+
+@if (mudurlukListesi == null)
+{
+    <p>Yükleniyor...</p>
+}
+else
+{
+   /* <select id="mudurlukSelect" multiple class="form-select" style="height: 200px;" @onchange="MudurlukSecildi">
+        @foreach (var item in mudurlukListesi)
+        {
+            <option value="@item.Kod">@item.Ad (@item.Kod)</option>
+        }
+    </select>*/
+
+    <select multiple class="form-select" style="height: 200px;" id="mudurlukSelect" @onchange="MudurlukSecildi">
+        @foreach (var item in mudurlukListesi)
+        {
+            <option value="@item.Kod">@item.Ad (@item.Kod)</option>
+        }
+    </select>
+
+    <br />
+
+    <input type="date" @bind="dilekceTarihi" />
+    <button @onclick="Islem1">İşlem 1</button>
+
+   
+}
+
+@code {
+    [Parameter]
+    public string KullaniciKodu { get; set; }
+    private List<string> seciliMudurlukler = new();
+    private DateTime dilekceTarihi = DateTime.Today;
+    private List<Mudurlukler> mudurlukListesi;
+    private List<string> seciliKodlar = new();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        KullaniciKodu = GetQueryParameter("kullaniciKodu");       
+
+        if (string.IsNullOrEmpty(KullaniciKodu))
+        {
+            NavManager.NavigateTo("/giris");
+            return;
+        }
+
+        var yetkiUrl = $"api/KullaniciYetki/{KullaniciKodu}";
+        var yetkiler = await Http.GetFromJsonAsync<List<KullaniciYetkiGumruk>>(yetkiUrl);
+
+        if (yetkiler != null)
+        {
+            var tumMudurlukler = await Http.GetFromJsonAsync<List<Mudurlukler>>("api/Mudurluk");
+            mudurlukListesi = tumMudurlukler
+                .Where(m => yetkiler.Any(y => y.GumrukKodu == m.Kod))
+                .ToList();
+        }
+        // Müdürlükleri getir
+        
+       // if (response != null)
+         //   mudurlukListesi = response;
+    }    
+
+    public class Mudurlukler
+    {
+        public string Kod { get; set; }
+        public string Ad { get; set; }
+    }
+
+    public class KullaniciYetkiGumruk
+    {
+        public string KullaniciKodu { get; set; }
+        public string GumrukKodu { get; set; }
+        public string GumrukAd { get; set; }
+    }
+    private string GetQueryParameter(string key)
+    {
+        var uri = new Uri(NavManager.Uri);
+        var queryParams = uri.Query.TrimStart('?')
+                            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(p => p.Split('='))
+                            .ToDictionary(pair => Uri.UnescapeDataString(pair[0]),
+                                          pair => pair.Length > 1 ? Uri.UnescapeDataString(pair[1]) : "");
+
+        return queryParams.TryGetValue(key, out var value) ? value : null;
+    }
+    private void HandleSelection(ChangeEventArgs e)
+    {
+        var selectedValues = new List<string>();
+
+        if (e.Value is not null)
+        {
+            var input = e.Value.ToString();
+            // Eğer browser yalnızca bir değer döndürüyorsa:
+            if (!string.IsNullOrEmpty(input))
+            {
+                selectedValues.Add(input);
+            }
+        }
+
+        // JavaScript tarafında birden fazla değer alınmaz. Bunun için JSInterop gerekebilir.
+        // Geçici çözüm: Seçimleri HTML/JS üzerinden alacağız (aşağıda öneriyorum)
+    }
+    private void Islem1()
+    {
+        if (seciliKodlar == null || !seciliKodlar.Any())
+        {
+            Console.WriteLine("Hiçbir müdürlük seçilmedi.");
+        }
+
+        stateService.SeciliMudurlukler = seciliKodlar;
+        stateService.DilekceTarihi = dilekceTarihi;
+
+        Console.WriteLine($"Yönlendiriliyor, {seciliKodlar.Count} müdürlük seçildi.");
+
+        navigationManager.NavigateTo("/yolluk");
+    }
+
+    //private void MudurlukSecildi(ChangeEventArgs e)
+   // {
+     //   var selectedOptions = ((IEnumerable<string>)e.Value).ToList();
+     //   seciliKodlar = selectedOptions;
+   // }
+
+    private async Task MudurlukSecildi(ChangeEventArgs e)
+    {
+        var selectedValues = new List<string>();
+
+        seciliKodlar = await jsRuntime.InvokeAsync<List<string>>("getSelectedValues", "mudurlukSelect");
+        Console.WriteLine($"Seçilen müdürlük sayısı: {seciliKodlar.Count}");
+
+        if (e.Value is not null)
+        {
+            // DOM'dan event geldiğinde aslında tek bir string döner — seçilen tüm seçenekler yakalanmaz.
+            // Blazor'da bunu yakalamak için JS tarafına geçmek gerekir.
+            // Ancak DOM üzerinden gelen veriyi işleyemiyorsak geçici çözüm InputSelectMany component'i olabilir.
+
+            Console.WriteLine("Seçim geldi ama birden fazla değer alınamadı.");
+        }
+
+        
+    }
+
+    
+
+}
+
