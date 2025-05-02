@@ -102,7 +102,7 @@ else
         var kodParam = Uri.EscapeDataString(string.Join(",", seciliKodlar));
         var tarihParam = Uri.EscapeDataString(dilekceTarihi.ToString("yyyy-MM-dd"));
 
-        var targetUrl = $"/yolluk4?mudurlukKodlari={kodParam}&dilekceTarihi={tarihParam}";
+        var targetUrl = $"/yolluk2?mudurlukKodlari={kodParam}&dilekceTarihi={tarihParam}";
         navigationManager.NavigateTo(targetUrl);
     }
 
