@@ -4,5 +4,6 @@
     {
         public List<string> SeciliMudurlukler { get; set; } = new();
         public DateTime DilekceTarihi { get; set; }
+        public string YollukMudurlukKod { get; set; } = string.Empty;
     }
 }

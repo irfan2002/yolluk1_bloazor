@@ -1,177 +1,96 @@
 ﻿@page "/yolluk"
-
-@using Yolluk_frontend_blazor.Services
+@inject HttpClient Http
 @inject MudurlukToYollukService MudurlukService
+@using Yolluk_frontend_blazor.Models.DTOs
 
-<h3 class="mb-4">Yolluk Sayfası</h3>
 
-<!-- Üst taraf: Form + Seçilen Personel -->
-<div class="grid grid-cols-2 gap-4">
+<h3>Yolluk Sayfası</h3>
 
-    <!-- 1. Kısım: Sol Üst Form -->
-    <div class="p-4 border rounded shadow">
-        <h4 class="mb-3">Yolluk Bilgileri</h4>
+<input id="dilekceTarihi" type="date" class="form-control"
+       @bind="DilekceTarihi" />
 
-        <InputText @bind-Value="yolluk.DilekceNo" class="form-control mb-2" placeholder="Dilekçe No" />
-        <InputDate @bind-Value="yolluk.DilekceTarihi" class="form-control mb-2" />
-        <InputText @bind-Value="yolluk.MakbuzNo" class="form-control mb-2" placeholder="Makbuz No" />
-        <InputDate @bind-Value="yolluk.MakbuzTarihi" class="form-control mb-2" />
+<p><strong>Seçilen Tarih:</strong> @DilekceTarihi.ToShortDateString()</p>
 
-        <select @bind="yolluk.Guzergah" class="form-select mb-2">
-            <option disabled selected>Güzergah Seçiniz</option>
-            @foreach (var g in guzergahlar)
-            {
-                <option value="@g">@g</option>
-            }
-        </select>
-
-        <select @bind="yolluk.Firma" class="form-select mb-2">
-            <option disabled selected>Firma Seçiniz</option>
-            @foreach (var f in firmalar)
-            {
-                <option value="@f">@f</option>
-            }
-        </select>
-
-        <select @bind="yolluk.Musavir" class="form-select mb-2">
-            <option disabled selected>Müşavir Seçiniz</option>
-            @foreach (var m in musavirler)
-            {
-                <option value="@m">@m</option>
-            }
-        </select>
-
-        <select @bind="yolluk.YollukTuru" class="form-select mb-2">
-            <option disabled selected>Yolluk Türü</option>
-            @foreach (var t in yollukTurleri)
-            {
-                <option value="@t">@t</option>
-            }
-        </select>
-
-        <select @bind="yolluk.Hesap" class="form-select mb-2">
-            <option disabled selected>Hesap Seçiniz</option>
-            @foreach (var h in hesaplar)
-            {
-                <option value="@h">@h</option>
-            }
-        </select>
-
-        <InputNumber @bind-Value="yolluk.KisiBasiTutar" class="form-control mb-2" placeholder="Kişi Başı Tutar" />
-        <InputDate @bind-Value="yolluk.TutarTarihi" class="form-control mb-2" />
-
-    </div>
-
-    <!-- 3. Kısım: Sağ Üst Seçilen Personeller -->
-    <div class="p-4 border rounded shadow">
-        <h4 class="mb-3">Seçilen Personeller</h4>
-        <ul class="list-group">
-            @foreach (var p in secilenPersoneller)
-            {
-                <li class="list-group-item d-flex justify-content-between">
-                    @p.AdSoyad
-                    <button class="btn btn-sm btn-danger" @onclick="@(() => Cikar(p))">Çıkar</button>
-                </li>
-            }
-        </ul>
-
-        <button class="btn btn-warning mt-2" @onclick="Temizle">Listeyi Temizle</button>
-    </div>
-</div>
-
-<!-- 2. Kısım: Alt Taraf Uygun Personeller -->
-<div class="mt-6 border rounded shadow p-4">
+@if (uygunPersoneller == null)
+{
+    <p><em>Yükleniyor...</em></p>
+}
+else if (!uygunPersoneller.Any())
+{
+    <p><em>Uygun personel bulunamadı.</em></p>
+}
+else
+{
     <h4>Uygun Personel Listesi</h4>
-    <table class="table table-bordered table-striped table-sm">
+    <table class="table">
         <thead>
             <tr>
-                <th>Seç</th>
-                <th>Yolluk Türü</th>
-                <th>Toplam Tutar</th>
                 <th>Sicil No</th>
-                <th>Ad</th>
-                <th>Soyad</th>
-                <th>Unvan</th>
+                <th>Ad Soyad</th>
                 <th>Müdürlük</th>
+                <th>Toplam Tutar</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var p in uygunPersoneller)
+            @foreach (var personel in uygunPersoneller)
             {
                 <tr>
-                    <td><input type="checkbox" @onchange="@(() => Ekle(p))" /></td>
-                    <td>
-                        <select @bind="p.YollukTuru">
-                            @foreach (var t in yollukTurleri)
-                            {
-                                <option value="@t">@t</option>
-                            }
-                        </select>
-                    </td>
-                    <td>@p.ToplamTutar</td>
-                    <td>@p.SicilNo</td>
-                    <td>@p.Ad</td>
-                    <td>@p.Soyad</td>
-                    <td>@p.Unvan</td>
-                    <td>@p.Mudurluk</td>
+                    <td>@personel.SicilNo</td>
+                    <td>@personel.AdSoyad</td>
+                    <td>@personel.MudurlukKodu</td>
+                    <td>@personel.ToplamTutar.ToString("C")</td>
                 </tr>
             }
         </tbody>
     </table>
-</div>
+}
 
 @code {
-    private YollukModel yolluk = new();
-    private List<string> guzergahlar = new() { "Ankara-İstanbul", "İzmir-Antalya" };
-    private List<string> firmalar = new() { "Firma A", "Firma B" };
-    private List<string> musavirler = new() { "Müşavir 1", "Müşavir 2" };
-    private List<string> yollukTurleri = new() { "Geçici", "Sürekli" };
-    private List<string> hesaplar = new() { "Hesap 1", "Hesap 2" };
+    private List<UygunPersonelDto> uygunPersoneller;
+    private DateTime _dilekceTarihi = DateTime.Today;
 
-    private List<UygunPersonel> uygunPersoneller = new(); // API'den çekilecek
-    private List<UygunPersonel> secilenPersoneller = new();
-
-    private void Ekle(UygunPersonel p)
+    protected override async Task OnInitializedAsync()
     {
-        if (!secilenPersoneller.Any(x => x.SicilNo == p.SicilNo))
-            secilenPersoneller.Add(p);
+        await GetUygunPersoneller();
     }
 
-    private void Cikar(UygunPersonel p)
+    private DateTime DilekceTarihi
     {
-        secilenPersoneller.Remove(p);
+        get => _dilekceTarihi;
+        set
+        {
+            if (_dilekceTarihi != value)
+            {
+                _dilekceTarihi = value;
+                _ = GetUygunPersoneller(); // Tarih değiştiğinde veri güncellemesi yapılacak
+            }
+        }
     }
 
-    private void Temizle()
+    private async Task GetUygunPersoneller()
     {
-        secilenPersoneller.Clear();
-    }
+        var secilenKodlar = MudurlukService.SeciliMudurlukler;
+        //secilenKodlar = await jsRuntime.InvokeAsync<List<string>>("getSelectedValues", "mudurlukSelect");
 
-    public class YollukModel
-    {
-        public string DilekceNo { get; set; }
-        public DateTime DilekceTarihi { get; set; }
-        public string MakbuzNo { get; set; }
-        public DateTime? MakbuzTarihi { get; set; }
-        public string Guzergah { get; set; }
-        public string Firma { get; set; }
-        public string Musavir { get; set; }
-        public string YollukTuru { get; set; }
-        public string Hesap { get; set; }
-        public decimal KisiBasiTutar { get; set; }
-        public DateTime TutarTarihi { get; set; }
-    }
+        if (DilekceTarihi == default || secilenKodlar == null || !secilenKodlar.Any())
+            return;
 
-    public class UygunPersonel
-    {
-        public string SicilNo { get; set; }
-        public string Ad { get; set; }
-        public string Soyad { get; set; }
-        public string Unvan { get; set; }
-        public string Mudurluk { get; set; }
-        public string YollukTuru { get; set; }
-        public decimal ToplamTutar { get; set; }
+        var kodlarParam = string.Join(",", secilenKodlar);
+        var url = $"api/UygunPersonel/GetUygunPersoneller?mudurlukKodlari={kodlarParam}&dilekceTarihi={DilekceTarihi:yyyy-MM-dd}";
 
-        public string AdSoyad => $"{Ad} {Soyad}";
+        Console.WriteLine($"Gelen Müdürlük Sayısı: {secilenKodlar?.Count ?? 0}");
+        Console.WriteLine($"Gelen Dilekçe Tarihi: {DilekceTarihi}");
+
+        try
+        {
+            uygunPersoneller = await Http.GetFromJsonAsync<List<UygunPersonelDto>>(url);
+            StateHasChanged(); // UI'yi güncelle
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Hata: " + ex.Message);
+            uygunPersoneller = new List<UygunPersonelDto>();
+            StateHasChanged(); // UI'yi güncelle
+        }
     }
 }

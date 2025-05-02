@@ -1,0 +1,231 @@
+﻿@page "/yolluk4"
+@inject HttpClient Http
+@using Yolluk_frontend_blazor.Models.DTOs
+@inject MudurlukToYollukService stateService
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Yolluk</PageTitle>
+
+<h3>Yolluk İşlemleri</h3>
+
+<div class="container">
+    <div class="row">
+        <!-- 1. Kısım: Yolluk Bilgileri -->
+        <div class="col-md-4 offset-md-1">
+            <h5>Yolluk Bilgileri</h5>
+
+            <div class="form-group row">
+                <label class="col-sm-5 col-form-label">Dilekçe Tarihi</label>
+                <div class="col-sm-7">
+                    <InputDate TValue="DateTime" Value="yolluk.DilekceTarihi" ValueChanged="OnDilekceTarihiChanged" ValueExpression = "@(() => yolluk.DilekceTarihi)" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="col-sm-5 col-form-label">Dilekçe No</label>
+                <div class="col-sm-7">
+                    <InputText @bind-Value="yolluk.DilekceNo" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="col-sm-5 col-form-label">Makbuz No</label>
+                <div class="col-sm-7">
+                    <InputText @bind-Value="yolluk.MakbuzNo" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="col-sm-5 col-form-label">Makbuz Tarihi</label>
+                <div class="col-sm-7">
+                    <InputDate @bind-Value="yolluk.MakbuzTarihi" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="col-sm-5 col-form-label">Kişi Başı Tutar</label>
+                <div class="col-sm-7">
+                    <InputNumber @bind-Value="yolluk.Tutar" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="col-sm-5 col-form-label">Güzergah</label>
+                <div class="col-sm-7">
+                    <select @bind="yolluk.fkGuzergahKod" class="form-control">
+                        <option value="">Güzergah Seç</option>
+                        @foreach (var item in guzergahlar)
+                        {
+                            <option value="@item.Kod">@item.Ad</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="col-sm-5 col-form-label">Firma</label>
+                <div class="col-sm-7">
+                    <select @bind="yolluk.fkFirmaKod" class="form-control">
+                        <option value="">Firma Seç</option>
+                        @foreach (var item in firmalar)
+                        {
+                            <option value="@item.Kod">@item.Ad</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Kısım: Seçilen Personeller -->
+        <div class="col-md-6">
+            <h5>Seçilen Personeller</h5>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Sicil</th>
+                        <th>Ad</th>
+                        <th>Soyad</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in secilenPersoneller)
+                    {
+                        <tr>
+                            <td>@p.SicilNo</td>
+                            <td>@p.Ad</td>
+                            <td>@p.Soyad</td>
+                            <td><button class="btn btn-sm btn-danger" @onclick="() => SecilenKaldir(p)">Çıkar</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <button class="btn btn-warning" @onclick="TumunuTemizle">Tümünü Temizle</button>
+        </div>
+    </div>
+
+    <!-- 2. Kısım: Uygun Personeller -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h5>Uygun Personel Listesi</h5>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Seç</th>
+                        <th>Sicil</th>
+                        <th>Ad</th>
+                        <th>Soyad</th>
+                        <th>Unvan</th>
+                        <th>Müdürlük</th>
+                        <th>Yolluk Türü</th>
+                        <th>Toplam Tutar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var personel in uygunPersoneller)
+                    {
+                        <tr>
+                            <td>
+                                <input type="checkbox" @onchange="e => SecPersonel(personel, ((ChangeEventArgs)e).Value is bool b && b)" />
+                            </td>
+                            <td>@personel.SicilNo</td>
+                            <td>@personel.Ad</td>
+                            <td>@personel.Soyad</td>
+                            <td>@personel.fkUnvanKod</td>
+                            <td>@personel.fkMudurlukKod</td>
+                            <td>
+                                <select @bind="personel.fkYollukTuruKod" class="form-control">
+                                    @foreach (var t in yollukTurleri)
+                                    {
+                                        <option value="@t.Kod">@t.Tur</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>@personel.ToplamTutar ₺</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    YollukDto yolluk = new();
+    List<PersonelDto> uygunPersoneller = new();
+    List<PersonelDto> secilenPersoneller = new();
+    List<GuzergahDto> guzergahlar = new();
+    List<FirmaDto> firmalar = new();
+    List<YollukTuruDto> yollukTurleri = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // StateService'ten gelen veriler
+        //yolluk.DilekceTarihi = stateService.DilekceTarihi.HasValue? stateService.DilekceTarihi.Value: DateTime.Today;
+        yolluk.DilekceTarihi = stateService.DilekceTarihi;
+        yolluk.MudurlukKodlari = stateService.SeciliMudurlukler;
+        yolluk.fkGumrukKod = stateService.YollukMudurlukKod;
+
+        if (yolluk.MudurlukKodlari.Any() && !string.IsNullOrWhiteSpace(yolluk.fkGumrukKod))
+        {
+            var kodParam = string.Join(",", yolluk.MudurlukKodlari);
+            var dateParam = yolluk.DilekceTarihi.ToString("yyyy-MM-dd");
+            var gumrukParam = yolluk.fkGumrukKod;
+
+            var url = $"api/UygunPersonel/GetUygunPersoneller2?mudurlukKodlari={kodParam}&dilekceTarihi={dateParam}&mudurlukKod={gumrukParam}";
+            uygunPersoneller = await Http.GetFromJsonAsync<List<PersonelDto>>(url);
+        }
+
+        guzergahlar = await Http.GetFromJsonAsync<List<GuzergahDto>>("api/Guzergahs");
+        firmalar = await Http.GetFromJsonAsync<List<FirmaDto>>("api/Firmas");
+        yollukTurleri = await Http.GetFromJsonAsync<List<YollukTuruDto>>("api/YollukTurus");
+    }
+    
+    private async Task OnDilekceTarihiChanged(DateTime yeniTarih)
+    {
+        Console.WriteLine("Dilekçe tarihi değişti.");
+        yolluk.DilekceTarihi = yeniTarih;
+        Console.WriteLine($"Yeni Dilekçe Tarihi: {yeniTarih}");
+        await UygunPersonelListesiniGuncelle();
+        
+    }
+    
+    private async Task UygunPersonelListesiniGuncelle()
+    {        
+        if (yolluk.MudurlukKodlari != null && yolluk.MudurlukKodlari.Any() && !string.IsNullOrWhiteSpace(yolluk.fkGumrukKod))
+        {           
+            var kodParam = string.Join(",", yolluk.MudurlukKodlari);
+            var dateParam = yolluk.DilekceTarihi.ToString("yyyy-MM-dd");
+            var mudurlukParam = yolluk.fkGumrukKod;
+            var url = $"api/UygunPersonel/GetUygunPersoneller2?mudurlukKodlari={kodParam}&dilekceTarihi={dateParam}&mudurlukKod={mudurlukParam}";
+            Console.WriteLine("Dilekçe tarihi değişti5.  " + url);            
+            try
+            {
+                uygunPersoneller = await Http.GetFromJsonAsync<List<PersonelDto>>(url);
+                Console.WriteLine($"Veri geldi mi? Count: {uygunPersoneller?.Count}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("API hatası: " + ex.Message);
+            }
+        }
+    }
+
+    void SecPersonel(PersonelDto personel, bool secili)
+    {
+        if (secili && !secilenPersoneller.Contains(personel))
+            secilenPersoneller.Add(personel);
+        else
+            secilenPersoneller.Remove(personel);
+    }
+
+    void SecilenKaldir(PersonelDto personel)
+    {
+        secilenPersoneller.Remove(personel);
+    }
+
+    void TumunuTemizle()
+    {
+        secilenPersoneller.Clear();
+    }
+}

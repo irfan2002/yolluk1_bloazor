@@ -1,0 +1,159 @@
+﻿@page "/yolluk2"
+@using Yolluk_frontend_blazor.Models.DTOs
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Yolluk</PageTitle>
+
+<h3 class="mb-4">Yolluk İşlemleri</h3>
+
+<div class="grid grid-cols-3 gap-4">
+    <!-- 1. Kısım: Sol üst form -->
+    <div class="col-span-1 p-4 border rounded shadow">
+        <h4 class="font-bold mb-2">Yolluk Bilgileri</h4>
+
+        <InputDate @bind-Value="yollukModel.DilekceTarihi" class="form-control mb-2" />
+        <InputText @bind-Value="yollukModel.DilekceNo" class="form-control mb-2" placeholder="Dilekçe No" />
+        <InputText @bind-Value="yollukModel.MakbuzNo" class="form-control mb-2" placeholder="Makbuz No" />
+        <InputDate @bind-Value="yollukModel.MakbuzTarihi" class="form-control mb-2" />
+        <InputNumber @bind-Value="yollukModel.Tutar" class="form-control mb-2" />
+
+        <select @bind="yollukModel.fkGuzergahKod" class="form-control mb-2">
+            <option value="">Güzergah Seçin</option>
+            @foreach (var g in guzergahlar)
+            {
+                <option value="@g.Kod">@g.Ad</option>
+            }
+        </select>
+
+        <select @bind="yollukModel.fkFirmaKod" class="form-control mb-2">
+            <option value="">Firma Seçin</option>
+            @foreach (var f in firmalar)
+            {
+                <option value="@f.Kod">@f.Ad</option>
+            }
+        </select>
+
+        <select @bind="yollukModel.fkMusavirKod" class="form-control mb-2">
+            <option value="">Müşavir Seçin</option>
+            @foreach (var m in musavirler)
+            {
+                <option value="@m.Kod">@m.Ad</option>
+            }
+        </select>
+
+        <select @bind="yollukModel.fkTurKod" class="form-control mb-2">
+            <option value="">Yolluk Türü</option>
+            @foreach (var y in yollukTurleri)
+            {
+                <option value="@y.Kod">@y.Tur</option>
+            }
+        </select>
+
+        <select @bind="yollukModel.fkHesapKod" class="form-control mb-2">
+            <option value="">Hesap Seçin</option>
+            @foreach (var h in hesaplar)
+            {
+                <option value="@h.Kod">@h.Turu</option>
+            }
+        </select>
+    </div>
+
+    <!-- 3. Kısım: Sağ üst - seçilen personel -->
+    <div class="col-span-1 p-4 border rounded shadow">
+        <h4 class="font-bold mb-2">Seçilen Personeller</h4>
+        <ul class="mb-2">
+            @foreach (var p in secilenPersoneller)
+            {
+                <li>@p.Ad @p.Soyad (@p.SicilNo)</li>
+            }
+        </ul>
+        <button class="btn btn-danger mr-2" @onclick="KisiyiCikar">Seçilen Kişiyi Çıkar</button>
+        <button class="btn btn-warning" @onclick="ListeyiTemizle">Listeyi Temizle</button>
+    </div>
+</div>
+
+<!-- 2. Kısım: Alt kısımda uygun personel listesi -->
+<div class="mt-6 p-4 border rounded shadow">
+    <h4 class="font-bold mb-2">Uygun Personeller</h4>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th></th>
+                <th>Sicil No</th>
+                <th>Ad</th>
+                <th>Soyad</th>
+                <th>Ünvan</th>
+                <th>Müdürlük</th>
+                <th>Yolluk Türü</th>
+                <th>Toplam Tutar</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var personel in uygunPersoneller)
+            {
+                <tr>
+                    <td>
+                        <input type="checkbox" @onchange="e => SecPersonel(personel, bool.Parse(e.Value.ToString()))" />
+                    </td>
+                    <td>@personel.SicilNo</td>
+                    <td>@personel.Ad</td>
+                    <td>@personel.Soyad</td>
+                    <td>@personel.fkUnvanKod</td>
+                    <td>@personel.fkMudurlukKod</td>
+                    <td>
+                        <select @bind="personel.fkYollukTuruKod">
+                            @foreach (var t in yollukTurleri)
+                            {
+                                <option value="@t.Kod">@t.Tur</option>
+                            }
+                        </select>
+                    </td>
+                    <td>@personel.ToplamTutar ₺</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private YollukDto yollukModel = new();
+    private List<GuzergahDto> guzergahlar = new();
+    private List<FirmaDto> firmalar = new();
+    private List<MusavirDto> musavirler = new();
+    private List<YollukTuruDto> yollukTurleri = new();
+    private List<HesapDto> hesaplar = new();
+
+    private List<PersonelDto> uygunPersoneller = new();
+    private List<PersonelDto> secilenPersoneller = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // API çağrıları ile dropdown verilerini doldur
+    }
+
+    void SecPersonel(PersonelDto p, bool secildi)
+    {
+        if (secildi)
+        {
+            if (!secilenPersoneller.Contains(p))
+                secilenPersoneller.Add(p);
+        }
+        else
+        {
+            secilenPersoneller.Remove(p);
+        }
+    }
+
+    void KisiyiCikar()
+    {
+        if (secilenPersoneller.Any())
+            secilenPersoneller.RemoveAt(secilenPersoneller.Count - 1); // örnek
+    }
+
+    void ListeyiTemizle()
+    {
+        secilenPersoneller.Clear();
+    }
+}
